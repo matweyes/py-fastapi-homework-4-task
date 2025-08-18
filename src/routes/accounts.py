@@ -375,7 +375,10 @@ async def request_password_reset_token(
 )
 async def reset_password(
         data: PasswordResetCompleteRequestSchema,
+        background_tasks: BackgroundTasks,
         db: AsyncSession = Depends(get_db),
+        settings: BaseAppSettings = Depends(get_settings),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     """
     Endpoint for resetting a user's password.
@@ -429,8 +432,15 @@ async def reset_password(
 
     try:
         user.password = data.password
-        await db.run_sync(lambda s: s.delete(token_record))
+        await db.delete(token_record)
         await db.commit()
+
+        login_link = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://127.0.0.1')}/accounts/login/"
+        background_tasks.add_task(
+            email_sender.send_password_reset_complete_email,
+            str(data.email),
+            login_link,
+        )
     except SQLAlchemyError:
         await db.rollback()
         raise HTTPException(
