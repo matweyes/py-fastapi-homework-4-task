@@ -34,7 +34,7 @@ class ProfileCreateData(BaseModel):
 
     @field_validator("first_name")
     @classmethod
-    def validate_first_name(cls, v) -> None:
+    def _validate_first_name(cls, v) -> None:
         return validate_name(v)
 
     @field_validator("last_name")
