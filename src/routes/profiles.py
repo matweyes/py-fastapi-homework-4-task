@@ -1,5 +1,6 @@
 from idlelib.rpc import response_queue
 
+from aiohttp.web_fileresponse import extension
 from fastapi import APIRouter, UploadFile, File, Depends, status, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -105,7 +106,7 @@ async def create_profile(
     if not target_user or not target_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or is inactive."
+            detail="User not found or not active."
         )
 
     stmt = select(UserProfileModel).where(UserProfileModel.user_id == user_id)
@@ -118,7 +119,7 @@ async def create_profile(
             detail="User already has a profile."
         )
 
-    avatar_key = f"avatars/{user_id}_avatar.jpg"
+    avatar_key = f"avatars/{user_id}_avatar.{profile_data.avatar.filename.split('.')[-1]}"
     try:
         avatar_content = await profile_data.avatar.read()
         await s3_client.upload_file(avatar_key, avatar_content)
